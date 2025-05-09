@@ -730,8 +730,15 @@ def update_game_state():
         new_y = safe_area.y + (safe_area.height - new_height) / 2
         safe_area = pygame.Rect(new_x, new_y, new_width, new_height)
 
-    # Handle human player movement with WASD keys
+    
+    # get keys that have been pressed
     keys = pygame.key.get_pressed()
+    
+    # handle esc key closing game
+    if keys[pygame.K_ESCAPE]:
+        pygame.quit()
+
+    # Handle human player movement with WASD keys
     if human_player in players:
         # Calculate new positions based on key presses
         new_x = human_player.x
