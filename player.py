@@ -17,6 +17,8 @@ class Player:
         self.is_human = is_human
         # Add a view range for AI players
         self.view_range = 400  # AI can only see players within this range
+        # Preferred distance AI players try to maintain from others
+        self.preferred_distance = 150  # AI will try to keep this distance from other players
         # Velocity for movement with acceleration/deceleration
         self.velocity = pygame.Vector2(0, 0)
 
@@ -192,6 +194,65 @@ class Player:
             projectiles.append(Projectile(player_center.x, player_center.y, 
                                         direction.x * 5, direction.y * 5, self))
     
+    def move_away_from(self, target, world_objects, players):
+        """Move away from a target while avoiding obstacles"""
+        direction = self.pos - target.pos  # Direction away from target
+        if direction.length() > 0:
+            direction.normalize_ip()
+            
+            # Apply acceleration away from target
+            self.velocity += direction * self.acceleration
+            
+            # Limit velocity to max speed
+            if self.velocity.length() > self.max_speed:
+                self.velocity.scale_to_length(self.max_speed)
+            
+            # Calculate new position
+            new_pos = self.pos + self.velocity
+            
+            # Check for collisions with world objects
+            new_rect_x = pygame.Rect(new_pos.x, self.pos.y, self.width, self.height)
+            new_rect_y = pygame.Rect(self.pos.x, new_pos.y, self.width, self.height)
+            
+            # Move in X direction if no collision
+            x_collision = False
+            for obj in world_objects:
+                if obj.collides_with(new_rect_x):
+                    x_collision = True
+                    self.velocity.x = 0  # Stop X velocity on collision
+                    break
+            
+            # Check collision with other players in X direction
+            for player in players:
+                if player != self and new_rect_x.colliderect(player.rect):
+                    x_collision = True
+                    self.velocity.x = 0  # Stop X velocity on collision
+                    break
+            
+            if not x_collision:
+                self.pos.x = new_pos.x
+            
+            # Move in Y direction if no collision
+            y_collision = False
+            for obj in world_objects:
+                if obj.collides_with(new_rect_y):
+                    y_collision = True
+                    self.velocity.y = 0  # Stop Y velocity on collision
+                    break
+            
+            # Check collision with other players in Y direction
+            for player in players:
+                if player != self and new_rect_y.colliderect(player.rect):
+                    y_collision = True
+                    self.velocity.y = 0  # Stop Y velocity on collision
+                    break
+            
+            if not y_collision:
+                self.pos.y = new_pos.y
+            
+            # Update rect position
+            self.rect.topleft = (self.pos.x, self.pos.y)
+
     def update(self, projectiles, players, world_objects):
         if not self.is_human:
             self.shoot_timer += 1
@@ -210,8 +271,31 @@ class Player:
                         player_center = self.pos + pygame.Vector2(16, 16)
                         projectiles.append(Projectile(player_center.x, player_center.y, direction.x * 5, direction.y * 5, self))
             
+            # Handle movement based on distance to nearest player
+            if nearest and self.pos.distance_to(nearest.pos) <= self.view_range:
+                current_distance = self.pos.distance_to(nearest.pos)
+                
+                # If too close, move away
+                if current_distance < self.preferred_distance - 20:  # Add a small buffer
+                    self.move_away_from(nearest, world_objects, players)
+                # If too far, move closer
+                elif current_distance > self.preferred_distance + 20:  # Add a small buffer
+                    self.move_towards(nearest, world_objects, players)
+                # If at a good distance, apply deceleration to slow down
+                else:
+                    # Apply deceleration in X direction
+                    if self.velocity.x > 0:
+                        self.velocity.x = max(0, self.velocity.x - self.deceleration)
+                    elif self.velocity.x < 0:
+                        self.velocity.x = min(0, self.velocity.x + self.deceleration)
+                    
+                    # Apply deceleration in Y direction
+                    if self.velocity.y > 0:
+                        self.velocity.y = max(0, self.velocity.y - self.deceleration)
+                    elif self.velocity.y < 0:
+                        self.velocity.y = min(0, self.velocity.y + self.deceleration)
             # Apply deceleration if no target or target out of range
-            if not nearest or self.pos.distance_to(nearest.pos) > self.view_range:
+            else:
                 # Apply deceleration in X direction
                 if self.velocity.x > 0:
                     self.velocity.x = max(0, self.velocity.x - self.deceleration)
