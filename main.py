@@ -3,6 +3,7 @@ import random
 import sys
 import math
 from player import Player, Projectile
+from camera import Camera
 
 # Initialize Pygame
 pygame.init()
@@ -20,30 +21,6 @@ RED = (255, 0, 0)
 BLUE = (0, 0, 255)
 GRAY = (200, 200, 200)
 BROWN = (139, 69, 19)
-
-# Camera class to follow the player
-class Camera:
-    def __init__(self, width, height):
-        self.rect = pygame.Rect(0, 0, width, height)
-        self.width = width
-        self.height = height
-    
-    def update(self, target):
-        # Center the camera on the target
-        x = target.x + target.rect.width // 2 - self.width // 2
-        y = target.y + target.rect.height // 2 - self.height // 2
-        
-        # Keep the camera within world bounds (optional, can be removed for truly unbounded world)
-        # x = max(0, min(x, WORLD_WIDTH - self.width))
-        # y = max(0, min(y, WORLD_HEIGHT - self.height))
-        
-        self.rect.x = x
-        self.rect.y = y
-    
-    def apply(self, entity):
-        # Return a rect with camera-adjusted coordinates
-        return pygame.Rect(entity.rect.x - self.rect.x, entity.rect.y - self.rect.y, 
-                          entity.rect.width, entity.rect.height)
 
 # World object class for obstacles (buildings)
 class WorldObject:
@@ -264,12 +241,7 @@ class WorldObject:
         # Draw the outer walls
         for wall_rect in self.wall_rects:
             # Apply camera offset to wall rect
-            camera_wall_rect = pygame.Rect(
-                wall_rect.x - camera.rect.x,
-                wall_rect.y - camera.rect.y,
-                wall_rect.width,
-                wall_rect.height
-            )
+            camera_wall_rect = camera.apply_rect(wall_rect)
             pygame.draw.rect(screen, self.color, camera_wall_rect)
     
     def collides_with(self, rect):
@@ -666,26 +638,23 @@ def draw_frame():
     screen.fill(WHITE)
     
     # Draw safe area with camera offset
-    safe_area_camera = pygame.Rect(
-        safe_area.x - camera.rect.x,
-        safe_area.y - camera.rect.y,
-        safe_area.width,
-        safe_area.height
-    )
+    safe_area_camera = camera.apply_rect(safe_area)
     pygame.draw.rect(screen, GREEN, safe_area_camera, 1)
     
     # Draw grid lines to show movement (optional)
     grid_size = 100
     for x in range(0, WORLD_WIDTH, grid_size):
-        if 0 <= x - camera.rect.x <= SCREEN_WIDTH:
+        screen_x, _ = camera.world_to_screen_pos(x, 0)
+        if 0 <= screen_x <= SCREEN_WIDTH:
             pygame.draw.line(screen, GRAY, 
-                            (x - camera.rect.x, 0), 
-                            (x - camera.rect.x, SCREEN_HEIGHT))
+                            (screen_x, 0), 
+                            (screen_x, SCREEN_HEIGHT))
     for y in range(0, WORLD_HEIGHT, grid_size):
-        if 0 <= y - camera.rect.y <= SCREEN_HEIGHT:
+        _, screen_y = camera.world_to_screen_pos(0, y)
+        if 0 <= screen_y <= SCREEN_HEIGHT:
             pygame.draw.line(screen, GRAY, 
-                            (0, y - camera.rect.y), 
-                            (SCREEN_WIDTH, y - camera.rect.y))
+                            (0, screen_y), 
+                            (SCREEN_WIDTH, screen_y))
     
     # Draw world objects (obstacles)
     for obj in world_objects:
@@ -701,7 +670,7 @@ def draw_frame():
     if human_player in players:
         font = pygame.font.SysFont(None, 24)
         coords_text = f"X: {int(human_player.x)}, Y: {int(human_player.y)}"
-        text_surface = font.render(coords_text, True, (0, 0, 0))
+        text_surface = font.render(coords_text, True, BLACK)
         screen.blit(text_surface, (10, 10))
 
     pygame.display.flip()
@@ -710,9 +679,8 @@ def draw_winner():
     screen.fill(WHITE)
     if players:
         winner = players[0]
-        # Center the winner on screen
-        camera.rect.x = winner.x + winner.rect.width // 2 - SCREEN_WIDTH // 2
-        camera.rect.y = winner.y + winner.rect.height // 2 - SCREEN_HEIGHT // 2
+        # Center the camera on the winner
+        camera.update(winner)
         
         # Draw world objects
         for obj in world_objects:

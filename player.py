@@ -1,6 +1,7 @@
 import pygame
 import random
 import math
+from camera import Camera
 
 class Player:
     def __init__(self, x, y, is_human=False):
@@ -151,8 +152,7 @@ class Player:
             self.shoot_timer = 0
             
             # Convert mouse position to world coordinates
-            world_mouse_x = mouse_pos[0] + camera.rect.x
-            world_mouse_y = mouse_pos[1] + camera.rect.y
+            world_mouse_x, world_mouse_y = camera.screen_to_world_pos(mouse_pos[0], mouse_pos[1])
             
             # Calculate direction from player to mouse
             direction_x = world_mouse_x - (self.x + 16)
@@ -192,8 +192,7 @@ class Player:
         
         # Draw health bar with camera offset
         health_width = 30 * (self.health / 100)
-        health_bar_x = self.x - camera.rect.x + 1
-        health_bar_y = self.y - camera.rect.y - 10
+        health_bar_x, health_bar_y = camera.world_to_screen_pos(self.x + 1, self.y - 10)
         pygame.draw.rect(screen, (255, 0, 0), (health_bar_x, health_bar_y, 30, 5))
         pygame.draw.rect(screen, (0, 255, 0), (health_bar_x, health_bar_y, health_width, 5))
 
