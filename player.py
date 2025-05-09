@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 from camera import Camera
 
 class Player:
@@ -21,6 +22,12 @@ class Player:
         self.preferred_distance = 150  # AI will try to keep this distance from other players
         # Velocity for movement with acceleration/deceleration
         self.velocity = pygame.Vector2(0, 0)
+        # Load player sprite
+        self.sprite = pygame.image.load("res/player.png").convert_alpha()
+        # Scale sprite to match player dimensions
+        self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
+        # Rotation angle in degrees (0 = facing right)
+        self.rotation = 0
 
     def find_nearest(self, others):
         min_dist = float('inf')
@@ -177,15 +184,22 @@ class Player:
         if not self.is_human:
             return
             
+        # Convert mouse position to world coordinates
+        world_mouse_pos = pygame.Vector2(camera.screen_to_world_pos(mouse_pos[0], mouse_pos[1]))
+        
+        # Calculate direction from player to mouse
+        player_center = self.pos + pygame.Vector2(16, 16)
+        direction = world_mouse_pos - player_center
+        
+        # Update rotation angle to face mouse
+        if direction.length() > 0:
+            # Calculate angle in radians and convert to degrees
+            angle = math.atan2(direction.y, direction.x)
+            self.rotation = math.degrees(angle)
+        
+        # Handle shooting
         if keys[pygame.K_SPACE] and self.shoot_timer >= 30:
             self.shoot_timer = 0
-            
-            # Convert mouse position to world coordinates
-            world_mouse_pos = pygame.Vector2(camera.screen_to_world_pos(mouse_pos[0], mouse_pos[1]))
-            
-            # Calculate direction from player to mouse
-            player_center = self.pos + pygame.Vector2(16, 16)
-            direction = world_mouse_pos - player_center
             
             # Normalize direction
             if direction.length() > 0:
@@ -260,15 +274,24 @@ class Player:
             # Find nearest player
             nearest = self.find_nearest(players)
             
-            # Handle shooting
-            if self.shoot_timer >= 60:
-                self.shoot_timer = 0
-                if nearest:
-                    direction = nearest.pos - self.pos
-                    dist = direction.length()
-                    if dist > 0 and dist <= self.view_range:  # Only shoot if within view range
-                        direction.normalize_ip()
-                        player_center = self.pos + pygame.Vector2(16, 16)
+            # Handle shooting and rotation
+            if nearest:
+                # Calculate direction to nearest player
+                player_center = self.pos + pygame.Vector2(16, 16)
+                direction = nearest.pos - player_center
+                dist = direction.length()
+                
+                # Update rotation to face the target
+                if dist > 0:
+                    angle = math.atan2(direction.y, direction.x)
+                    self.rotation = math.degrees(angle)
+                
+                # Handle shooting
+                if self.shoot_timer >= 60:
+                    self.shoot_timer = 0
+                    if dist <= self.view_range:  # Only shoot if within view range
+                        if direction.length() > 0:
+                            direction.normalize_ip()
                         projectiles.append(Projectile(player_center.x, player_center.y, direction.x * 5, direction.y * 5, self))
             
             # Handle movement based on distance to nearest player
@@ -312,9 +335,17 @@ class Player:
             self.shoot_timer += 1
 
     def draw(self, screen, camera):
-        # Draw player with camera offset
+        # Get camera-adjusted position
         camera_rect = camera.apply(self)
-        pygame.draw.rect(screen, self.color, camera_rect)
+        
+        # Rotate the sprite to face the aiming direction
+        rotated_sprite = pygame.transform.rotate(self.sprite, -self.rotation)
+        
+        # Get the rect of the rotated sprite
+        rot_rect = rotated_sprite.get_rect(center=camera_rect.center)
+        
+        # Draw the rotated sprite
+        screen.blit(rotated_sprite, rot_rect.topleft)
         
         # Draw health bar with camera offset
         health_width = 30 * (self.health / 100)
