@@ -102,73 +102,73 @@ class Buildings:
                 room_rect, has_door_north, has_door_east, has_door_south, has_door_west = room_data
                 
                 # Add exterior walls for this room
-                room_x, room_y = room_rect.x, room_rect.y
+                # room_pos.x, room_pos.y = room_rect.x, room_rect.y
                 room_width, room_height = room_rect.width, room_rect.height
                 
                 # Add walls for this room (with doors where specified)
-                room_pos = pygame.Vector2(room_x, room_y)
+                room_pos = pygame.Vector2(room_rect.x, room_rect.y)
                 
                 # North wall
                 if has_door_north:
                     door_pos = pygame.Vector2(
-                        room_x + (room_width - door_width) // 2,
-                        room_y
+                        room_pos.x + (room_width - door_width) // 2,
+                        room_pos.y
                     )
                     self.door_rects.append(pygame.Rect(door_pos.x, door_pos.y, door_width, wall_thickness))
                     # Add wall segments on either side of the door
-                    self.wall_rects.append(pygame.Rect(room_x, room_y, door_pos.x - room_x, wall_thickness))
-                    self.wall_rects.append(pygame.Rect(door_pos.x + door_width, room_y, 
-                                                     room_x + room_width - (door_pos.x + door_width), wall_thickness))
+                    self.wall_rects.append(pygame.Rect(room_pos.x, room_pos.y, door_pos.x - room_pos.x, wall_thickness))
+                    self.wall_rects.append(pygame.Rect(door_pos.x + door_width, room_pos.y, 
+                                                     room_pos.x + room_width - (door_pos.x + door_width), wall_thickness))
                 else:
-                    self.wall_rects.append(pygame.Rect(room_x, room_y, room_width, wall_thickness))
+                    self.wall_rects.append(pygame.Rect(room_pos.x, room_pos.y, room_width, wall_thickness))
                 
                 # East wall
                 if has_door_east:
                     door_pos = pygame.Vector2(
-                        room_x + room_width - wall_thickness,
-                        room_y + (room_height - door_width) // 2
+                        room_pos.x + room_width - wall_thickness,
+                        room_pos.y + (room_height - door_width) // 2
                     )
                     self.door_rects.append(pygame.Rect(door_pos.x, door_pos.y, wall_thickness, door_width))
                     # Add wall segments above and below the door
-                    self.wall_rects.append(pygame.Rect(door_pos.x, room_y + wall_thickness, 
-                                                     wall_thickness, door_pos.y - (room_y + wall_thickness)))
+                    self.wall_rects.append(pygame.Rect(door_pos.x, room_pos.y + wall_thickness, 
+                                                     wall_thickness, door_pos.y - (room_pos.y + wall_thickness)))
                     self.wall_rects.append(pygame.Rect(door_pos.x, door_pos.y + door_width, 
-                                                     wall_thickness, room_y + room_height - wall_thickness - (door_pos.y + door_width)))
+                                                     wall_thickness, room_pos.y + room_height - wall_thickness - (door_pos.y + door_width)))
                 else:
-                    self.wall_rects.append(pygame.Rect(room_x + room_width - wall_thickness, 
-                                                     room_y + wall_thickness, 
+                    self.wall_rects.append(pygame.Rect(room_pos.x + room_width - wall_thickness, 
+                                                     room_pos.y + wall_thickness, 
                                                      wall_thickness, 
                                                      room_height - 2 * wall_thickness))
                 
                 # South wall
                 if has_door_south:
                     door_pos = pygame.Vector2(
-                        room_x + (room_width - door_width) // 2,
-                        room_y + room_height - wall_thickness
+                        room_pos.x + (room_width - door_width) // 2,
+                        room_pos.y + room_height - wall_thickness
                     )
                     self.door_rects.append(pygame.Rect(door_pos.x, door_pos.y, door_width, wall_thickness))
                     # Add wall segments on either side of the door
-                    self.wall_rects.append(pygame.Rect(room_x, door_pos.y, door_pos.x - room_x, wall_thickness))
+                    self.wall_rects.append(pygame.Rect(room_pos.x, door_pos.y, door_pos.x - room_pos.x, wall_thickness))
                     self.wall_rects.append(pygame.Rect(door_pos.x + door_width, door_pos.y, 
-                                                     room_x + room_width - (door_pos.x + door_width), wall_thickness))
+                                                     room_pos.x + room_width - (door_pos.x + door_width), wall_thickness))
                 else:
-                    self.wall_rects.append(pygame.Rect(room_x, room_y + room_height - wall_thickness, 
+                    self.wall_rects.append(pygame.Rect(room_pos.x, room_pos.y + room_height - wall_thickness, 
                                                      room_width, wall_thickness))
                 
                 # West wall
                 if has_door_west:
                     door_pos = pygame.Vector2(
-                        room_x,
-                        room_y + (room_height - door_width) // 2
+                        room_pos.x,
+                        room_pos.y + (room_height - door_width) // 2
                     )
                     self.door_rects.append(pygame.Rect(door_pos.x, door_pos.y, wall_thickness, door_width))
                     # Add wall segments above and below the door
-                    self.wall_rects.append(pygame.Rect(door_pos.x, room_y + wall_thickness, 
-                                                     wall_thickness, door_pos.y - (room_y + wall_thickness)))
+                    self.wall_rects.append(pygame.Rect(door_pos.x, room_pos.y + wall_thickness, 
+                                                     wall_thickness, door_pos.y - (room_pos.y + wall_thickness)))
                     self.wall_rects.append(pygame.Rect(door_pos.x, door_pos.y + door_width, 
-                                                     wall_thickness, room_y + room_height - wall_thickness - (door_pos.y + door_width)))
+                                                     wall_thickness, room_pos.y + room_height - wall_thickness - (door_pos.y + door_width)))
                 else:
-                    self.wall_rects.append(pygame.Rect(room_x, room_y + wall_thickness, 
+                    self.wall_rects.append(pygame.Rect(room_pos.x, room_pos.y + wall_thickness, 
                                                      wall_thickness, room_height - 2 * wall_thickness))
             
             # Add exterior door (randomly placed on the outer perimeter)

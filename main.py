@@ -218,7 +218,7 @@ def main():
         # Update game state if there are still players
         if len(players) > 1 and not game_over:
             result = update_game()
-            if result == False:  # Check if ESC was pressed
+            if not result:  # Check if ESC was pressed
                 running = False
                 break
             draw_frame()
