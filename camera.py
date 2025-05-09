@@ -1,8 +1,5 @@
 import pygame
 
-# World dimensions (same as in main.py)
-WORLD_WIDTH, WORLD_HEIGHT = 3000, 3000
-
 class Camera:
     def __init__(self, width, height):
         self.rect = pygame.Rect(0, 0, width, height)

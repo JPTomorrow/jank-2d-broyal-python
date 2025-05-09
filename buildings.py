@@ -1,14 +1,6 @@
 import pygame
 import random
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-GRAY = (200, 200, 200)
-BROWN = (139, 69, 19)
+import colors
 
 # Class for buildings
 class Buildings:
@@ -16,7 +8,7 @@ class Buildings:
         self.rect = pygame.Rect(x, y, width, height)  # Outer rectangle (full building)
         self.wall_thickness = wall_thickness
         self.door_width = door_width
-        self.color = BROWN
+        self.color = colors.BROWN
         self.is_complex = is_complex
         self.sub_rooms = sub_rooms or []  # List of sub-rooms for complex buildings
         

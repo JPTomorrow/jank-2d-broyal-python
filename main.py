@@ -1,26 +1,20 @@
 import pygame
 import random
 import sys
-import math
-from player import Player, Projectile
+from player import Player
 from camera import Camera
-from buildings import Buildings, create_buildings
+from buildings import create_buildings
+import colors
+
+# globals
+SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
+WORLD_WIDTH, WORLD_HEIGHT = 3000, 3000
+FPS = 60
 
 # Initialize Pygame
 pygame.init()
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600  # Screen dimensions
-WORLD_WIDTH, WORLD_HEIGHT = 3000, 3000  # World dimensions (much larger than screen)
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
-FPS = 60
-
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-BLUE = (0, 0, 255)
-GRAY = (200, 200, 200)
 
 def setup():
     global players, projectiles, safe_area, shrink_timer, human_player, camera, buildings
@@ -62,7 +56,7 @@ def setup():
                     valid_spawn = False
     
     human_player = Player(x, y, is_human=True)
-    human_player.color = BLUE  # Blue color for human player
+    human_player.color = colors.BLUE  # Blue color for human player
     players.append(human_player)
     projectiles = []
     
@@ -149,24 +143,24 @@ def update_game():
     projectiles[:] = [p for p in projectiles if p.lifetime > 0]
 
 def draw_frame():
-    screen.fill(WHITE)
+    screen.fill(colors.WHITE)
     
     # Draw safe area with camera offset
     safe_area_camera = camera.apply_rect(safe_area)
-    pygame.draw.rect(screen, GREEN, safe_area_camera, 1)
+    pygame.draw.rect(screen, colors.GREEN, safe_area_camera, 1)
     
     # Draw grid lines to show movement (optional)
     grid_size = 100
     for x in range(0, WORLD_WIDTH, grid_size):
         screen_x, _ = camera.world_to_screen_pos(x, 0)
         if 0 <= screen_x <= SCREEN_WIDTH:
-            pygame.draw.line(screen, GRAY, 
+            pygame.draw.line(screen, colors.GRAY, 
                             (screen_x, 0), 
                             (screen_x, SCREEN_HEIGHT))
     for y in range(0, WORLD_HEIGHT, grid_size):
         _, screen_y = camera.world_to_screen_pos(0, y)
         if 0 <= screen_y <= SCREEN_HEIGHT:
-            pygame.draw.line(screen, GRAY, 
+            pygame.draw.line(screen, colors.GRAY, 
                             (0, screen_y), 
                             (SCREEN_WIDTH, screen_y))
     
@@ -184,13 +178,13 @@ def draw_frame():
     if human_player in players:
         font = pygame.font.SysFont(None, 24)
         coords_text = f"X: {int(human_player.x)}, Y: {int(human_player.y)}"
-        text_surface = font.render(coords_text, True, BLACK)
+        text_surface = font.render(coords_text, True, colors.BLACK)
         screen.blit(text_surface, (10, 10))
 
     pygame.display.flip()
 
 def draw_winner():
-    screen.fill(WHITE)
+    screen.fill(colors.WHITE)
     if players:
         winner = players[0]
         # Center the camera on the winner
@@ -202,7 +196,7 @@ def draw_winner():
             
         winner.draw(screen, camera)
         font = pygame.font.SysFont(None, 36)
-        text = font.render("Winner!", True, BLACK)
+        text = font.render("Winner!", True, colors.BLACK)
         screen.blit(text, (SCREEN_WIDTH//2 - text.get_width()//2, 50))
     pygame.display.flip()
 

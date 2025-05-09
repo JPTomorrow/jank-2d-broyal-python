@@ -1,6 +1,5 @@
 import pygame
 import random
-import math
 from camera import Camera
 
 class Player:
