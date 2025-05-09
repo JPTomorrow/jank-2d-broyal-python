@@ -8,15 +8,17 @@ class Camera:
     
     def update(self, target):
         # Center the camera on the target
-        x = target.x + target.rect.width // 2 - self.width // 2
-        y = target.y + target.rect.height // 2 - self.height // 2
+        camera_pos = pygame.Vector2(
+            target.pos.x + target.rect.width // 2 - self.width // 2,
+            target.pos.y + target.rect.height // 2 - self.height // 2
+        )
         
         # Keep the camera within world bounds (optional, can be removed for truly unbounded world)
-        # x = max(0, min(x, WORLD_WIDTH - self.width))
-        # y = max(0, min(y, WORLD_HEIGHT - self.height))
+        # camera_pos.x = max(0, min(camera_pos.x, WORLD_WIDTH - self.width))
+        # camera_pos.y = max(0, min(camera_pos.y, WORLD_HEIGHT - self.height))
         
-        self.rect.x = x
-        self.rect.y = y
+        self.rect.x = camera_pos.x
+        self.rect.y = camera_pos.y
     
     def apply(self, entity):
         # Return a rect with camera-adjusted coordinates
@@ -34,12 +36,10 @@ class Camera:
     
     def world_to_screen_pos(self, world_x, world_y):
         # Convert world coordinates to screen coordinates
-        screen_x = world_x - self.rect.x
-        screen_y = world_y - self.rect.y
-        return screen_x, screen_y
+        screen_pos = pygame.Vector2(world_x, world_y) - pygame.Vector2(self.rect.topleft)
+        return screen_pos.x, screen_pos.y
     
     def screen_to_world_pos(self, screen_x, screen_y):
         # Convert screen coordinates to world coordinates
-        world_x = screen_x + self.rect.x
-        world_y = screen_y + self.rect.y
-        return world_x, world_y
+        world_pos = pygame.Vector2(screen_x, screen_y) + pygame.Vector2(self.rect.topleft)
+        return world_pos.x, world_pos.y

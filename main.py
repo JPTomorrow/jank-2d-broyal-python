@@ -27,35 +27,35 @@ def setup():
     for _ in range(9):
         valid_spawn = False
         while not valid_spawn:
-            x = random.randint(0, WORLD_WIDTH - 32)
-            y = random.randint(0, WORLD_HEIGHT - 32)
-            player_rect = pygame.Rect(x, y, 32, 32)
+            spawn_pos = pygame.Vector2(
+                random.randint(0, WORLD_WIDTH - 32),
+                random.randint(0, WORLD_HEIGHT - 32)
+            )
+            player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
             valid_spawn = True
             for obj in buildings:
                 if obj.collides_with(player_rect):
                     valid_spawn = False
                     break
-        players.append(Player(x, y))
+        players.append(Player(spawn_pos.x, spawn_pos.y))
     
     # Create 1 human player in the center of the world (ensuring they don't spawn inside walls)
     valid_spawn = False
+    spawn_pos = pygame.Vector2(WORLD_WIDTH // 2, WORLD_HEIGHT // 2)
     while not valid_spawn:
-        x = WORLD_WIDTH // 2
-        y = WORLD_HEIGHT // 2
-        player_rect = pygame.Rect(x, y, 32, 32)
+        player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
         valid_spawn = True
         for obj in buildings:
             if obj.collides_with(player_rect):
-                x += 50  # Try a bit to the right
-                y += 50  # and down
-                player_rect = pygame.Rect(x, y, 32, 32)
+                spawn_pos += pygame.Vector2(50, 50)  # Try a bit to the right and down
+                player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
                 if not obj.collides_with(player_rect):
                     valid_spawn = True
                     break
                 else:
                     valid_spawn = False
     
-    human_player = Player(x, y, is_human=True)
+    human_player = Player(spawn_pos.x, spawn_pos.y, is_human=True)
     human_player.color = colors.BLUE  # Blue color for human player
     players.append(human_player)
     projectiles = []
@@ -76,9 +76,11 @@ def update_game():
         shrink_timer = 0
         new_width = safe_area.width * 0.9
         new_height = safe_area.height * 0.9
-        new_x = safe_area.x + (safe_area.width - new_width) / 2
-        new_y = safe_area.y + (safe_area.height - new_height) / 2
-        safe_area = pygame.Rect(new_x, new_y, new_width, new_height)
+        new_pos = pygame.Vector2(
+            safe_area.x + (safe_area.width - new_width) / 2,
+            safe_area.y + (safe_area.height - new_height) / 2
+        )
+        safe_area = pygame.Rect(new_pos.x, new_pos.y, new_width, new_height)
 
     
     # get keys that have been pressed
@@ -179,7 +181,7 @@ def draw_frame():
     # Draw coordinates for debugging
     if human_player in players:
         font = pygame.font.SysFont(None, 24)
-        coords_text = f"X: {int(human_player.x)}, Y: {int(human_player.y)}"
+        coords_text = f"X: {int(human_player.pos.x)}, Y: {int(human_player.pos.y)}"
         text_surface = font.render(coords_text, True, colors.BLACK)
         screen.blit(text_surface, (10, 10))
 
