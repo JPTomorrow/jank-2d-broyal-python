@@ -7,7 +7,9 @@ class Player:
         self.x = x
         self.y = y
         self.health = 100
-        self.speed = 2
+        self.max_speed = 2  # Maximum speed
+        self.acceleration = 0.1  # How quickly the player accelerates
+        self.deceleration = 0.08  # How quickly the player decelerates
         self.width = 32
         self.height = 32
         self.rect = pygame.Rect(x, y, self.width, self.height)
@@ -16,7 +18,7 @@ class Player:
         self.is_human = is_human
         # Add a view range for AI players
         self.view_range = 400  # AI can only see players within this range
-        # Add velocity for collision resolution
+        # Velocity for movement with acceleration/deceleration
         self.vx = 0
         self.vy = 0
 
@@ -40,9 +42,17 @@ class Player:
             dx /= dist
             dy /= dist
             
+            # Apply acceleration towards target
+            self.vx += dx * self.acceleration
+            self.vy += dy * self.acceleration
+            
+            # Limit velocity to max speed
+            self.vx = max(-self.max_speed, min(self.max_speed, self.vx))
+            self.vy = max(-self.max_speed, min(self.max_speed, self.vy))
+            
             # Calculate new position
-            new_x = self.x + dx * self.speed
-            new_y = self.y + dy * self.speed
+            new_x = self.x + self.vx
+            new_y = self.y + self.vy
             
             # Check for collisions with world objects
             new_rect_x = pygame.Rect(new_x, self.y, self.width, self.height)
@@ -53,12 +63,14 @@ class Player:
             for obj in world_objects:
                 if obj.collides_with(new_rect_x):
                     x_collision = True
+                    self.vx = 0  # Stop X velocity on collision
                     break
             
             # Check collision with other players in X direction
             for player in players:
                 if player != self and new_rect_x.colliderect(player.rect):
                     x_collision = True
+                    self.vx = 0  # Stop X velocity on collision
                     break
             
             if not x_collision:
@@ -69,12 +81,14 @@ class Player:
             for obj in world_objects:
                 if obj.collides_with(new_rect_y):
                     y_collision = True
+                    self.vy = 0  # Stop Y velocity on collision
                     break
             
             # Check collision with other players in Y direction
             for player in players:
                 if player != self and new_rect_y.colliderect(player.rect):
                     y_collision = True
+                    self.vy = 0  # Stop Y velocity on collision
                     break
             
             if not y_collision:
@@ -84,26 +98,44 @@ class Player:
             self.rect.topleft = (self.x, self.y)
 
     def handle_movement(self, keys, world_objects, players):
-        """Handle human player movement with WASD keys"""
+        """Handle human player movement with WASD keys using acceleration and deceleration"""
         if not self.is_human:
             return
             
-        # Calculate new positions based on key presses
-        new_x = self.x
-        new_y = self.y
-        
+        # Apply acceleration based on key presses
         # W - move up
         if keys[pygame.K_w]:
-            new_y -= self.speed
+            self.vy -= self.acceleration
         # S - move down
-        if keys[pygame.K_s]:
-            new_y += self.speed
+        elif keys[pygame.K_s]:
+            self.vy += self.acceleration
+        # If neither W nor S is pressed, apply deceleration in Y direction
+        else:
+            if self.vy > 0:
+                self.vy = max(0, self.vy - self.deceleration)
+            elif self.vy < 0:
+                self.vy = min(0, self.vy + self.deceleration)
+        
         # A - move left
         if keys[pygame.K_a]:
-            new_x -= self.speed
+            self.vx -= self.acceleration
         # D - move right
-        if keys[pygame.K_d]:
-            new_x += self.speed
+        elif keys[pygame.K_d]:
+            self.vx += self.acceleration
+        # If neither A nor D is pressed, apply deceleration in X direction
+        else:
+            if self.vx > 0:
+                self.vx = max(0, self.vx - self.deceleration)
+            elif self.vx < 0:
+                self.vx = min(0, self.vx + self.deceleration)
+        
+        # Limit velocity to max speed
+        self.vx = max(-self.max_speed, min(self.max_speed, self.vx))
+        self.vy = max(-self.max_speed, min(self.max_speed, self.vy))
+        
+        # Calculate new positions based on velocity
+        new_x = self.x + self.vx
+        new_y = self.y + self.vy
         
         # Check for collisions with world objects in X direction
         new_rect_x = pygame.Rect(new_x, self.y, self.width, self.height)
@@ -111,12 +143,14 @@ class Player:
         for obj in world_objects:
             if obj.collides_with(new_rect_x):
                 x_collision = True
+                self.vx = 0  # Stop X velocity on collision
                 break
         
         # Check for collisions with other players in X direction
         for player in players:
             if player != self and new_rect_x.colliderect(player.rect):
                 x_collision = True
+                self.vx = 0  # Stop X velocity on collision
                 break
         
         if not x_collision:
@@ -128,12 +162,14 @@ class Player:
         for obj in world_objects:
             if obj.collides_with(new_rect_y):
                 y_collision = True
+                self.vy = 0  # Stop Y velocity on collision
                 break
         
         # Check for collisions with other players in Y direction
         for player in players:
             if player != self and new_rect_y.colliderect(player.rect):
                 y_collision = True
+                self.vy = 0  # Stop Y velocity on collision
                 break
         
         if not y_collision:
@@ -169,9 +205,13 @@ class Player:
     def update(self, projectiles, players, world_objects):
         if not self.is_human:
             self.shoot_timer += 1
+            
+            # Find nearest player
+            nearest = self.find_nearest(players)
+            
+            # Handle shooting
             if self.shoot_timer >= 60:
                 self.shoot_timer = 0
-                nearest = self.find_nearest(players)
                 if nearest:
                     dx = nearest.x - self.x
                     dy = nearest.y - self.y
@@ -180,6 +220,20 @@ class Player:
                         dx /= dist
                         dy /= dist
                         projectiles.append(Projectile(self.x + 16, self.y + 16, dx * 5, dy * 5, self))
+            
+            # Apply deceleration if no target or target out of range
+            if not nearest or ((self.x - nearest.x) ** 2 + (self.y - nearest.y) ** 2) ** 0.5 > self.view_range:
+                # Apply deceleration in X direction
+                if self.vx > 0:
+                    self.vx = max(0, self.vx - self.deceleration)
+                elif self.vx < 0:
+                    self.vx = min(0, self.vx + self.deceleration)
+                
+                # Apply deceleration in Y direction
+                if self.vy > 0:
+                    self.vy = max(0, self.vy - self.deceleration)
+                elif self.vy < 0:
+                    self.vy = min(0, self.vy + self.deceleration)
         else:
             # Human player shoots on spacebar press, handled separately
             self.shoot_timer += 1

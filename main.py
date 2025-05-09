@@ -86,7 +86,7 @@ def update_game():
     
     # handle esc key closing game
     if keys[pygame.K_ESCAPE]:
-        pygame.quit()
+        return False  # Signal to main loop that we should exit
 
     # Handle human player updates if it exists
     if human_player in players:
@@ -141,6 +141,8 @@ def update_game():
     # Remove dead players and expired projectiles
     players[:] = [p for p in players if p.health > 0]
     projectiles[:] = [p for p in projectiles if p.lifetime > 0]
+    
+    return True  # Continue the game
 
 def draw_frame():
     screen.fill(colors.WHITE)
@@ -213,7 +215,10 @@ def main():
         
         # Update game state if there are still players
         if len(players) > 1 and not game_over:
-            update_game()
+            result = update_game()
+            if result == False:  # Check if ESC was pressed
+                running = False
+                break
             draw_frame()
         elif not game_over:
             game_over = True
