@@ -1,33 +1,40 @@
 import pygame
 import random
 import math
-from camera import Camera
+# from camera import Camera
 
 class Player:
     def __init__(self, x, y, is_human=False):
+        # render stuff
         self.pos = pygame.Vector2(x, y)
-        self.health = 100
-        self.max_speed = 2  # Maximum speed
-        self.acceleration = 0.1  # How quickly the player accelerates
-        self.deceleration = 0.08  # How quickly the player decelerates
         self.width = 32
         self.height = 32
         self.rect = pygame.Rect(self.pos.x, self.pos.y, self.width, self.height)
         self.color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-        self.shoot_timer = 0
-        self.is_human = is_human
-        # Add a view range for AI players
-        self.view_range = 400  # AI can only see players within this range
-        # Preferred distance AI players try to maintain from others
-        self.preferred_distance = 150  # AI will try to keep this distance from other players
-        # Velocity for movement with acceleration/deceleration
-        self.velocity = pygame.Vector2(0, 0)
-        # Load player sprite
         self.sprite = pygame.image.load("res/player.png").convert_alpha()
-        # Scale sprite to match player dimensions
         self.sprite = pygame.transform.scale(self.sprite, (self.width, self.height))
-        # Rotation angle in degrees (0 = facing right)
+        
+        # stats
+        self.health = 100
+        self.bullet_speed = 13
+        self.is_human = is_human
+        
+        # movement
+        self.max_speed = 2.5
+        self.sprint_max_speed = 5
+        self.acceleration = 0.15
+        self.deceleration = 0.08
+        self.velocity = pygame.Vector2(0, 0)
         self.rotation = 0
+        self.rotation_offset = -10
+
+        # shooting
+        self.shoot_timer = 0
+        self.shoot_position_offset = pygame.Vector2(0,0)
+        
+        # AI players
+        self.view_range = 400  # AI can only see players within this range
+        self.preferred_distance = 150  # AI will try to keep this distance from other players
 
     def find_nearest(self, others):
         min_dist = float('inf')
@@ -103,7 +110,12 @@ class Player:
         """Handle human player movement with WASD keys using acceleration and deceleration"""
         if not self.is_human:
             return
-            
+        
+        # check for sprinting
+        max_speed = self.max_speed
+        if keys[pygame.K_LSHIFT]:
+            max_speed = self.sprint_max_speed
+
         # Apply acceleration based on key presses
         # W - move up
         if keys[pygame.K_w]:
@@ -132,8 +144,8 @@ class Player:
                 self.velocity.x = min(0, self.velocity.x + self.deceleration)
         
         # Limit velocity to max speed
-        if self.velocity.length() > self.max_speed:
-            self.velocity.scale_to_length(self.max_speed)
+        if self.velocity.length() > max_speed:
+            self.velocity.scale_to_length(max_speed)
         
         # Calculate new positions based on velocity
         new_pos = self.pos + self.velocity
@@ -179,8 +191,8 @@ class Player:
         # Update rect position
         self.rect.topleft = (self.pos.x, self.pos.y)
     
-    def handle_shooting(self, keys, mouse_pos, camera, projectiles):
-        """Handle human player shooting with spacebar"""
+    def handle_shooting(self, keys, mouse_pos, mouse_buttons, camera, projectiles):
+        """Handle human player shooting with left mouse button"""
         if not self.is_human:
             return
             
@@ -195,18 +207,18 @@ class Player:
         if direction.length() > 0:
             # Calculate angle in radians and convert to degrees
             angle = math.atan2(direction.y, direction.x)
-            self.rotation = math.degrees(angle)
+            self.rotation = math.degrees(angle) + self.rotation_offset
         
-        # Handle shooting
-        if keys[pygame.K_SPACE] and self.shoot_timer >= 30:
+        # Handle shooting with left mouse button (button 0)
+        if mouse_buttons[0] and self.shoot_timer >= 30:
             self.shoot_timer = 0
             
             # Normalize direction
             if direction.length() > 0:
                 direction.normalize_ip()
                 
-            projectiles.append(Projectile(player_center.x, player_center.y, 
-                                        direction.x * 5, direction.y * 5, self))
+            projectiles.append(Projectile(player_center.x + self.shoot_position_offset.x, player_center.y + self.shoot_position_offset.y, 
+                                        direction.x * self.bullet_speed, direction.y * self.bullet_speed, self))
     
     def move_away_from(self, target, world_objects, players):
         """Move away from a target while avoiding obstacles"""
@@ -284,7 +296,7 @@ class Player:
                 # Update rotation to face the target
                 if dist > 0:
                     angle = math.atan2(direction.y, direction.x)
-                    self.rotation = math.degrees(angle)
+                    self.rotation = math.degrees(angle) + self.rotation_offset
                 
                 # Handle shooting
                 if self.shoot_timer >= 60:
@@ -292,7 +304,9 @@ class Player:
                     if dist <= self.view_range:  # Only shoot if within view range
                         if direction.length() > 0:
                             direction.normalize_ip()
-                        projectiles.append(Projectile(player_center.x, player_center.y, direction.x * 5, direction.y * 5, self))
+                        projectiles.append(Projectile(player_center.x + self.shoot_position_offset.x, 
+                                                      player_center.y + self.shoot_position_offset.y, 
+                                                      direction.x * self.bullet_speed, direction.y * self.bullet_speed, self))
             
             # Handle movement based on distance to nearest player
             if nearest and self.pos.distance_to(nearest.pos) <= self.view_range:
@@ -354,19 +368,43 @@ class Player:
         pygame.draw.rect(screen, (0, 255, 0), (health_bar_pos[0], health_bar_pos[1], health_width, 5))
 
 class Projectile:
-    def __init__(self, x, y, dx, dy, owner):
+    def __init__(self, x, y, dx, dy, owner, dmg = 35):
         self.pos = pygame.Vector2(x, y)
         self.velocity = pygame.Vector2(dx, dy)
-        self.rect = pygame.Rect(x, y, 5, 5)
+        self.proj_length_decay = 1
+        self.rect = pygame.Rect(x, y, 30, 3)
         self.owner = owner
-        self.lifetime = 300  # Add lifetime to prevent projectiles from traveling forever
+        self.lifetime = 40  # Add lifetime to prevent projectiles from traveling forever
+        self.mark_destroyed = False
+        self.damage = dmg
+        
+        # Calculate rotation angle based on velocity direction
+        if self.velocity.length() > 0:
+            angle = math.atan2(self.velocity.y, self.velocity.x)
+            self.rotation = math.degrees(angle)
+        else:
+            self.rotation = 0
 
     def update(self):
         self.pos += self.velocity
         self.rect.topleft = (self.pos.x, self.pos.y)
         self.lifetime -= 1
+        if self.rect.width > 2:
+            self.rect.width -= self.proj_length_decay
 
     def draw(self, screen, camera):
-        # Draw projectile with camera offset
+        # Get camera-adjusted position
         camera_rect = camera.apply(self)
-        pygame.draw.rect(screen, (0, 0, 0), camera_rect)
+        
+        # Create a surface for the projectile
+        projectile_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
+        pygame.draw.rect(projectile_surface, (0, 0, 0), (0, 0, self.rect.width, self.rect.height))
+        
+        # Rotate the surface
+        rotated_surface = pygame.transform.rotate(projectile_surface, -self.rotation)
+        
+        # Get the rect of the rotated surface centered at the camera-adjusted position
+        rotated_rect = rotated_surface.get_rect(center=camera_rect.center)
+        
+        # Draw the rotated projectile
+        screen.blit(rotated_surface, rotated_rect.topleft)

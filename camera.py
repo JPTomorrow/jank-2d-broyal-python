@@ -1,10 +1,11 @@
 import pygame
+from globals import SCREEN_WIDTH, SCREEN_HEIGHT
 
 class Camera:
-    def __init__(self, width, height):
-        self.rect = pygame.Rect(0, 0, width, height)
-        self.width = width
-        self.height = height
+    def __init__(self):
+        self.rect = pygame.Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT)
+        self.width = SCREEN_WIDTH
+        self.height = SCREEN_HEIGHT
     
     def update(self, target):
         # Center the camera on the target

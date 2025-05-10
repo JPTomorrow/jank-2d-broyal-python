@@ -1,15 +1,12 @@
 import pygame
-import random
 import sys
-from player import Player
-from camera import Camera
-from buildings import create_buildings
+import buildings
 import colors
+import game
 
-# globals
-SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
-WORLD_WIDTH, WORLD_HEIGHT = 3000, 3000
-FPS = 60
+from game import game_state, main_camera
+from globals import SCREEN_WIDTH, SCREEN_HEIGHT, WORLD_WIDTH, WORLD_HEIGHT,  FPS
+
 
 # Initialize Pygame
 pygame.init()
@@ -17,58 +14,19 @@ screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 clock = pygame.time.Clock()
 
 def setup():
-    global players, projectiles, safe_area, shrink_timer, human_player, camera, buildings
+    global safe_area, shrink_timer
     
     # Create buildings (obstacles)
-    buildings = create_buildings(WORLD_WIDTH, WORLD_HEIGHT)
-    
-    # Create 9 AI players spread across the world (ensuring they don't spawn inside walls)
-    players = []
-    for _ in range(9):
-        valid_spawn = False
-        while not valid_spawn:
-            spawn_pos = pygame.Vector2(
-                random.randint(0, WORLD_WIDTH - 32),
-                random.randint(0, WORLD_HEIGHT - 32)
-            )
-            player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
-            valid_spawn = True
-            for obj in buildings:
-                if obj.collides_with(player_rect):
-                    valid_spawn = False
-                    break
-        players.append(Player(spawn_pos.x, spawn_pos.y))
-    
-    # Create 1 human player in the center of the world (ensuring they don't spawn inside walls)
-    valid_spawn = False
-    spawn_pos = pygame.Vector2(WORLD_WIDTH // 2, WORLD_HEIGHT // 2)
-    while not valid_spawn:
-        player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
-        valid_spawn = True
-        for obj in buildings:
-            if obj.collides_with(player_rect):
-                spawn_pos += pygame.Vector2(50, 50)  # Try a bit to the right and down
-                player_rect = pygame.Rect(spawn_pos.x, spawn_pos.y, 32, 32)
-                if not obj.collides_with(player_rect):
-                    valid_spawn = True
-                    break
-                else:
-                    valid_spawn = False
-    
-    human_player = Player(spawn_pos.x, spawn_pos.y, is_human=True)
-    human_player.color = colors.BLUE  # Blue color for human player
-    players.append(human_player)
-    projectiles = []
+    game_state.buildings = buildings.create_buildings(WORLD_WIDTH, WORLD_HEIGHT)
+
+    game.spawn_players()
     
     # Create a safe area that's initially the entire world
     safe_area = pygame.Rect(0, 0, WORLD_WIDTH, WORLD_HEIGHT)
     shrink_timer = 0
     
-    # Create camera
-    camera = Camera(SCREEN_WIDTH, SCREEN_HEIGHT)
-
 def update_game():
-    global players, projectiles, safe_area, shrink_timer, human_player, camera, buildings
+    global safe_area, shrink_timer
 
     # Update safe area
     shrink_timer += 1
@@ -91,58 +49,43 @@ def update_game():
         return False  # Signal to main loop that we should exit
 
     # Handle human player updates if it exists
-    if human_player in players:
+    if game_state.human_player in game_state.players:
         # Handle movement
-        human_player.handle_movement(keys, buildings, players)
+        game_state.human_player.handle_movement(keys, game_state.buildings, game_state.players)
         
         # Update camera to follow human player
-        camera.update(human_player)
+        main_camera.update(game_state.human_player)
         
         # Handle shooting
         mouse_pos = pygame.mouse.get_pos()
-        human_player.handle_shooting(keys, mouse_pos, camera, projectiles)
+        mouse_buttons = pygame.mouse.get_pressed()
+        game_state.human_player.handle_shooting(keys, mouse_pos, mouse_buttons, main_camera, game_state.projectiles)
 
-    # Update players and projectiles
-    for player in players[:]:
+    # Update players
+    for player in game_state.players[:]:
         if player.is_human:
-            player.update(projectiles, players, buildings)
+            player.update(game_state.projectiles, game_state.players, game_state.buildings)
         else:
-            player.update(projectiles, players, buildings)
+            player.update(game_state.projectiles, game_state.players, game_state.buildings)
             # AI players move towards nearest player if one is found
-            nearest = player.find_nearest(players)
+            nearest = player.find_nearest(game_state.players)
             if nearest:
-                player.move_towards(nearest, buildings, players)
+                player.move_towards(nearest, game_state.buildings, game_state.players)
 
-    for projectile in projectiles[:]:
+    # update projectiles
+    for projectile in game_state.projectiles[:]:
         projectile.update()
-
-    # Check collisions
-    for projectile in projectiles[:]:
-        if projectile in projectiles:  # Check if projectile still exists
-            # Check collision with buildings
-            for obj in buildings:
-                if obj.collides_with(projectile.rect):
-                    if projectile in projectiles:  # Double-check before removing
-                        projectiles.remove(projectile)
-                    break
-            
-            # If projectile still exists, check collision with players
-            if projectile in projectiles:
-                for player in players:
-                    if player != projectile.owner and player.rect.colliderect(projectile.rect):
-                        player.health -= 10
-                        if projectile in projectiles:  # Double-check before removing
-                            projectiles.remove(projectile)
-                        break
+    
+    game.handle_projectile_collisions(game_state.projectiles, game_state.players, game_state.buildings)   
 
     # Damage players outside safe area
-    for player in players:
+    for player in game_state.players:
         if not safe_area.contains(player.rect):
             player.health -= 1
 
     # Remove dead players and expired projectiles
-    players[:] = [p for p in players if p.health > 0]
-    projectiles[:] = [p for p in projectiles if p.lifetime > 0]
+    game_state.players[:] = [p for p in game_state.players if p.health > 0]
+    game_state.projectiles[:] = [p for p in game_state.projectiles if p.lifetime > 0]
     
     return True  # Continue the game
 
@@ -150,38 +93,38 @@ def draw_frame():
     screen.fill(colors.WHITE)
     
     # Draw safe area with camera offset
-    safe_area_camera = camera.apply_rect(safe_area)
+    safe_area_camera = main_camera.apply_rect(safe_area)
     pygame.draw.rect(screen, colors.GREEN, safe_area_camera, 1)
     
     # Draw grid lines to show movement (optional)
     grid_size = 100
     for x in range(0, WORLD_WIDTH, grid_size):
-        screen_x, _ = camera.world_to_screen_pos(x, 0)
+        screen_x, _ = main_camera.world_to_screen_pos(x, 0)
         if 0 <= screen_x <= SCREEN_WIDTH:
             pygame.draw.line(screen, colors.GRAY, 
                             (screen_x, 0), 
                             (screen_x, SCREEN_HEIGHT))
     for y in range(0, WORLD_HEIGHT, grid_size):
-        _, screen_y = camera.world_to_screen_pos(0, y)
+        _, screen_y = main_camera.world_to_screen_pos(0, y)
         if 0 <= screen_y <= SCREEN_HEIGHT:
             pygame.draw.line(screen, colors.GRAY, 
                             (0, screen_y), 
                             (SCREEN_WIDTH, screen_y))
     
     # Draw buildings (obstacles)
-    for obj in buildings:
-        obj.draw(screen, camera)
+    for obj in game_state.buildings:
+        obj.draw(screen, main_camera)
     
     # Draw everything with camera offset
-    for player in players:
-        player.draw(screen, camera)
-    for projectile in projectiles:
-        projectile.draw(screen, camera)
+    for player in game_state.players:
+        player.draw(screen, main_camera)
+    for projectile in game_state.projectiles:
+        projectile.draw(screen, main_camera)
     
     # Draw coordinates for debugging
-    if human_player in players:
+    if game_state.human_player in game_state.players:
         font = pygame.font.SysFont(None, 24)
-        coords_text = f"X: {int(human_player.pos.x)}, Y: {int(human_player.pos.y)}"
+        coords_text = f"X: {int(game_state.human_player.pos.x)}, Y: {int(game_state.human_player.pos.y)}"
         text_surface = font.render(coords_text, True, colors.BLACK)
         screen.blit(text_surface, (10, 10))
 
@@ -189,16 +132,16 @@ def draw_frame():
 
 def draw_winner():
     screen.fill(colors.WHITE)
-    if players:
-        winner = players[0]
+    if game_state.players:
+        winner = game_state.players[0]
         # Center the camera on the winner
-        camera.update(winner)
+        main_camera.update(winner)
         
         # Draw buildings
-        for obj in buildings:
-            obj.draw(screen, camera)
+        for obj in game_state.buildings:
+            obj.draw(screen, main_camera)
             
-        winner.draw(screen, camera)
+        winner.draw(screen, main_camera)
         font = pygame.font.SysFont(None, 36)
         text = font.render("Winner!", True, colors.BLACK)
         screen.blit(text, (SCREEN_WIDTH//2 - text.get_width()//2, 50))
@@ -216,7 +159,7 @@ def main():
                 running = False
         
         # Update game state if there are still players
-        if len(players) > 1 and not game_over:
+        if len(game_state.players) > 1 and not game_over:
             result = update_game()
             if not result:  # Check if ESC was pressed
                 running = False
