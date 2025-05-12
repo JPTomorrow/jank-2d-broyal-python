@@ -21,10 +21,10 @@ class Camera:
         self.rect.x = camera_pos.x
         self.rect.y = camera_pos.y
     
-    def apply(self, entity):
+    def apply(self, rect):
         # Return a rect with camera-adjusted coordinates
-        return pygame.Rect(entity.rect.x - self.rect.x, entity.rect.y - self.rect.y, 
-                          entity.rect.width, entity.rect.height)
+        return pygame.Rect(rect.x - self.rect.x, rect.y - self.rect.y, 
+                          rect.width, rect.height)
     
     def apply_rect(self, rect):
         # Apply camera offset to a pygame Rect

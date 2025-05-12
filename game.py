@@ -9,11 +9,13 @@ from game_state import GameState
 from camera import Camera
 from globals import WORLD_WIDTH, WORLD_HEIGHT, SCREEN_WIDTH, SCREEN_HEIGHT
 from kill_circle import KillCircle
+from ground import Ground
     
 game_state = GameState()
 _screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 main_camera = Camera()
 kill_circle = KillCircle()
+ground = Ground()
 
 """ 
 :SETUP
@@ -153,12 +155,12 @@ def draw_winner():
 
 """ draw all debug elements """
 def draw_debug():
-    draw_grid_lines()
+    # draw_grid_lines()
     draw_debug_coords()
 
 def draw_grid_lines():
     # Draw grid lines to show movement (optional)
-    grid_size = 100
+    grid_size = 32
     for x in range(0, WORLD_WIDTH, grid_size):
         _screen_x, _ = main_camera.world_to_screen_pos(x, 0)
         if 0 <= _screen_x <= SCREEN_WIDTH:
@@ -171,6 +173,9 @@ def draw_grid_lines():
             pygame.draw.line(_screen, colors.GRAY, 
                             (0, _screen_y), 
                             (SCREEN_WIDTH, _screen_y))
+            
+def draw_ground():
+    ground.draw(_screen, main_camera)
             
 def draw_debug_coords():
     if game_state.human_player in game_state.players:

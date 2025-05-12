@@ -29,6 +29,7 @@ def update_game():
 
 def draw_frame():
     game.clear_screen()
+    game.draw_ground()
     game.draw_debug()
     game.draw_buildings()
     game.draw_kill_circle()

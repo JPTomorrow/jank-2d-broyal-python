@@ -350,7 +350,7 @@ class Player:
 
     def draw(self, screen, camera):
         # Get camera-adjusted position
-        camera_rect = camera.apply(self)
+        camera_rect = camera.apply(self.rect)
         
         # Rotate the sprite to face the aiming direction
         rotated_sprite = pygame.transform.rotate(self.sprite, -self.rotation)
@@ -394,7 +394,7 @@ class Projectile:
 
     def draw(self, screen, camera):
         # Get camera-adjusted position
-        camera_rect = camera.apply(self)
+        camera_rect = camera.apply(self.rect)
         
         # Create a surface for the projectile
         projectile_surface = pygame.Surface((self.rect.width, self.rect.height), pygame.SRCALPHA)
