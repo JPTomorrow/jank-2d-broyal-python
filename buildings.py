@@ -72,7 +72,7 @@ class Buildings:
         offset = (rel_rect.x, rel_rect.y)
         return self.collision_mask.overlap(obj_mask, offset) is not None
 
-def create_buildings(WORLD_WIDTH, WORLD_HEIGHT):
+def create_buildings(WORLD_WIDTH, WORLD_HEIGHT, num_buildings = 30):
     """Create buildings for the game world"""
     buildings = []
     
@@ -89,8 +89,6 @@ def create_buildings(WORLD_WIDTH, WORLD_HEIGHT):
     if not building_types:
         building_types = [1]
     
-    # Create some random buildings
-    num_buildings = 30
     
     # Create a list to track building positions to avoid overlap
     building_rects = []

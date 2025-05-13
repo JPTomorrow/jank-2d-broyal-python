@@ -17,6 +17,8 @@ main_camera = Camera()
 kill_circle = KillCircle()
 ground = Ground()
 
+_building_cnt = 10
+
 """ 
 :SETUP
 """
@@ -24,7 +26,7 @@ ground = Ground()
 
 def create_buildings():
     game_state.buildings = buildings.create_buildings(
-        WORLD_WIDTH, WORLD_HEIGHT)
+        WORLD_WIDTH, WORLD_HEIGHT, _building_cnt)
 
 
 """ Create 9 AI players spread across the world (ensuring they don't spawn inside walls)
@@ -157,7 +159,7 @@ def expired_entity_cleanup():
 
 
 def clear_screen():
-    _screen.fill(colors.WHITE)
+    _screen.fill(colors.BLACK)
 
 
 def draw_kill_circle():

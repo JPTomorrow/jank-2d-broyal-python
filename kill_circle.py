@@ -28,4 +28,4 @@ class KillCircle:
     # Draw safe area with camera offset
     def draw(self, screen, main_cam): 
         safe_area_camera = main_cam.apply_rect(self.safe_area)
-        pygame.draw.rect(screen, colors.GREEN, safe_area_camera, 1)
+        pygame.draw.rect(screen, colors.RED, safe_area_camera, 5, border_radius=20)
